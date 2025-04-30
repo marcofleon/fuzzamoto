@@ -6,7 +6,7 @@ use crate::{
 use corepc_node::{Conf, Node, P2P};
 use std::net::{SocketAddrV4, TcpListener, TcpStream};
 
-use super::ConnectableTarget;
+use super::{ConnectableTarget, HasMempool};
 
 pub struct BitcoinCoreTarget {
     pub node: Node,
@@ -63,6 +63,10 @@ impl Target<V1Transport> for BitcoinCoreTarget {
             "-keypool=10",
             "-listenonion=0",
             "-i2pacceptincoming=0",
+            "-maxmempool=5", // 5MB
+            "-dbcache=4",    // 4MiB
+            "-datacarriersize=1000000",
+            "-peertimeout=8223372036854775807",
         ]);
 
         let node = Node::with_conf(exe_path, &config)
@@ -181,5 +185,14 @@ Can you-"#
 impl ConnectableTarget for BitcoinCoreTarget {
     fn get_addr(&self) -> Option<SocketAddrV4> {
         self.node.params.p2p_socket.clone()
+    }
+}
+
+impl HasMempool for BitcoinCoreTarget {
+    fn get_mempool(&self) -> Option<serde_json::Value> {
+        self.node
+            .client
+            .call::<serde_json::Value>("getrawmempool", &[true.into()])
+            .ok()
     }
 }

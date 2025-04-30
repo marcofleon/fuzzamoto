@@ -44,3 +44,7 @@ pub trait ConnectableTarget {
         None
     }
 }
+
+pub trait HasMempool {
+    fn get_mempool(&self) -> Option<serde_json::Value>;
+}
