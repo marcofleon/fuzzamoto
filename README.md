@@ -1,3 +1,5 @@
+# Fuzzamoto
+
 Fuzzamoto provides a framework and fuzzing engine for coverage-guided fuzzing
 of Bitcoin full node implementations.
 
@@ -14,9 +16,11 @@ of Bitcoin full node implementations.
 *It is not meant to be a replacement for traditional fuzzing of isolated
 components, but rather a complement to it.*
 
-## Trophies 
+Check out the [documentation](./doc/src/README.md) for more information.
 
-| Project                                                                | Bug                                                                   | [Scenario](./design/scenarios.md)           |
+## Trophies
+
+| Project                                                                | Bug                                                                   | Scenario           |
 | :--------------------------------------------------------------------- | :-------------------------------------------------------------------- | :----------------- |
 | [Bitcoin Core](https://github.com/bitcoin/bitcoin) | [`migratewallet` RPC assertion failure](https://github.com/bitcoin/bitcoin/issues/32111) | `wallet-migration` |
 | [Bitcoin Core](https://github.com/bitcoin/bitcoin) | [`migratewallet` RPC assertion failure](https://github.com/bitcoin/bitcoin/issues/32112) | `wallet-migration` |

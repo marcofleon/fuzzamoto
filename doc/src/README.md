@@ -18,7 +18,7 @@ components, but rather a complement to it.*
 
 ## Trophies 
 
-| Project                                                                | Bug                                                                   | [Scenario](./design/scenarios.md)           |
+| Project                                                                | Bug                                                                   | Scenario           |
 | :--------------------------------------------------------------------- | :-------------------------------------------------------------------- | :----------------- |
 | [Bitcoin Core](https://github.com/bitcoin/bitcoin) | [`migratewallet` RPC assertion failure](https://github.com/bitcoin/bitcoin/issues/32111) | `wallet-migration` |
 | [Bitcoin Core](https://github.com/bitcoin/bitcoin) | [`migratewallet` RPC assertion failure](https://github.com/bitcoin/bitcoin/issues/32112) | `wallet-migration` |
