@@ -148,7 +148,7 @@
 VM, by building the scenario binary without the nyx feature and supplying it
 the input either through <code>stdin</code> or the <code>FUZZAMOTO_INPUT</code> environment variable.</p>
 <p>Build all scenarios for reproduction purposes:</p>
-<pre><code>cargo build --release --features reproduce --workspace
+<pre><code>cargo build --release --package fuzzamoto-scenarios --features reproduce
 </code></pre>
 <p><code>--features reproduce</code> is used to enable features useful for reproduction, e.g.
 inherit stdout from the target application, such that any logs, stack traces,
