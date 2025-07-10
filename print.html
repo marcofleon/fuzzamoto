@@ -166,6 +166,7 @@ components, but rather a complement to it.</em></p>
 <tr><td align="left"><a href="https://github.com/bitcoin/bitcoin">Bitcoin Core</a></td><td align="left"><a href="https://github.com/bitcoin/bitcoin/issues/32112"><code>migratewallet</code> RPC assertion failure</a></td><td align="left"><code>wallet-migration</code></td></tr>
 <tr><td align="left"><a href="https://github.com/bitcoin/bitcoin">Bitcoin Core</a></td><td align="left"><a href="https://github.com/bitcoin/bitcoin/issues/32173">assertion failure in <code>CheckBlockIndex</code></a></td><td align="left"><code>rpc-generic</code></td></tr>
 <tr><td align="left"><a href="https://github.com/bitcoin/bitcoin/pull/30277">Bitcoin Core PR#30277</a></td><td align="left"><a href="https://github.com/bitcoin/bitcoin/pull/30277#issuecomment-2992101654">Remotely reachable assertion failure in <code>Miniketch::Deserialize</code></a></td><td align="left"><code>ir</code></td></tr>
+<tr><td align="left"><a href="https://github.com/bitcoin/bitcoin/pull/28676">Bitcoin Core PR#28676</a></td><td align="left"><a href="https://github.com/bitcoin/bitcoin/pull/28676#issuecomment-3016809091">Assertion failure in <code>CTxMemPool::check()</code></a></td><td align="left"><code>ir</code></td></tr>
 </tbody></table>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="snapshot-fuzzing"><a class="header" href="#snapshot-fuzzing">Snapshot Fuzzing</a></h1>
 <p>To achieve deterministic and performant fuzzing of one or more full node
@@ -185,7 +186,7 @@ to reset itself quickly to that snapshot.</p>
        │                                                     │ 
        │                                                     │ 
        │                                                     │ 
-┌──────┼──────────── Virtural Machine ──────────────────┐    │ 
+┌──────┼──────────── Virtual Machine ───────────────────┐    │ 
 │      │                                                │    │ 
 │ ┌────┼─────┐                            ┌───────────┐ │    │ 
 │ │ Scenario │◄───────p2p/rpc/...────────►│ Full Node │ │    No
@@ -338,7 +339,7 @@ execution.</p>
 <h2 id="design"><a class="header" href="#design">Design</a></h2>
 <p>Fuzzamoto IR consists of a sequence of operations that take some input
 variables and produce variables as output. All variables are typed (see
-<a href="https://github.com/dergoegge/fuzzamoto/tree/master/fuzzamoto-ir/src/variables.rs">variables.rs</a>)
+<a href="https://github.com/dergoegge/fuzzamoto/tree/master/fuzzamoto-ir/src/variable.rs">variable.rs</a>)
 and operations expect variables of compatible type. The IR uses static single
 assignement form (SSA), which means every variable in the IR is assigned
 exactly once. SSA helps simplify define-use analysis, type inference and code
@@ -596,21 +597,45 @@ fuzzing campaigns with libafl.</p>
 </code></pre>
 <p>And then create a new container from it (mounting the current directory to
 <code>/fuzzamoto</code>):</p>
-<pre><code>docker run --privileged -it fuzzamoto-libafl -v $PWD:/fuzzamoto bash
+<pre><code>docker run --privileged -it -v $PWD:/fuzzamoto fuzzamoto-libafl bash
 </code></pre>
 <p><code>--privileged</code> is required to enable the use of kvm by Nyx.</p>
-<p><strong>More instructions will follow soon, see the inline documentation in
-Dockerfile.libafl for now.</strong></p>
+<p>Inside the container, build the fuzzer and all scenarios:</p>
+<pre><code>cd /fuzzamoto
+BITCOIND_PATH=/bitcoin/build_fuzz/bin/bitcoind cargo build --workspace --release --features fuzz
+</code></pre>
+<p>Then, build the crash handler and initialize the nyx share dir:</p>
+<pre><code># Build the crash handler
+clang-19 -fPIC -DENABLE_NYX -D_GNU_SOURCE -DNO_PT_NYX \
+    ./fuzzamoto-nyx-sys/src/nyx-crash-handler.c -ldl -I. -shared -o libnyx_crash_handler.so
+# Initialize the nyx share dir
+./target/release/fuzzamoto-cli init --sharedir /tmp/fuzzamoto_scenario-ir \
+    --crash-handler /fuzzamoto/libnyx_crash_handler.so \
+    --bitcoind /bitcoin/build_fuzz/bin/bitcoind \
+    --scenario ./target/release/scenario-ir
+</code></pre>
+<p>The fuzzer uses shared memory to communicate between its instances, you'll
+likely need to increase the size of <code>/dev/shm</code>:</p>
+<pre><code># 50% is likely overkill
+mount -o remount,size=50% /dev/shm
+</code></pre>
+<p>Then, run the fuzzer:</p>
+<pre><code>mkdir /tmp/in
+./target/release/fuzzamoto-libafl \
+    --input /tmp/in/ --output /tmp/out/ \
+    --share /tmp/fuzzamoto_scenario-ir/ \
+    --cores 0-15 # 16 cores, adjust for your system
+</code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="reproducing-testcases"><a class="header" href="#reproducing-testcases">Reproducing Testcases</a></h1>
 <p>Crashing or other interesting inputs can be reproduced without the snapshotting
 VM, by building the scenario binary without the nyx feature and supplying it
 the input either through <code>stdin</code> or the <code>FUZZAMOTO_INPUT</code> environment variable.</p>
-<p>Ensure scenarios are build without the nyx feature:</p>
-<pre><code>cargo build --release --features inherit_stdout,reduced_pow --workspace
+<p>Build all scenarios for reproduction purposes:</p>
+<pre><code>cargo build --release --package fuzzamoto-scenarios --features reproduce
 </code></pre>
-<p><code>--features inherit_stdout</code> is used to inherit stdout from the target
-application, such that any logs, stack traces, etc. are printed to the
-terminal.</p>
+<p><code>--features reproduce</code> is used to enable features useful for reproduction, e.g.
+inherit stdout from the target application, such that any logs, stack traces,
+etc. are printed to the terminal.</p>
 <h2 id="http-server-example"><a class="header" href="#http-server-example"><code>http-server</code> example</a></h2>
 <p>Run the scneario with the input supplied through <code>stdin</code> and pass the right
 <code>bitcoind</code> binary:</p>
@@ -623,7 +648,7 @@ terminal.</p>
 <h2 id="troubleshooting"><a class="header" href="#troubleshooting">Troubleshooting</a></h2>
 <ul>
 <li>
-<p>Make sure to not use the nyx feature or else you'll see:</p>
+<p>Make sure to not use the <code>nyx</code> feature or else you'll see:</p>
 <pre><code>...
 Segmentation fault (core dumped)
 </code></pre>
@@ -643,8 +668,9 @@ failed to create client: Io(Os { code: 2, kind: NotFound, message: &quot;No such
 <li>
 <p>If an input does not reproduce, check that you are compiling with all
 necessary features relevant for your case, such as <code>compile_in_vm</code>,
-<code>force_send_and_ping</code> and <code>reduced_pow</code> (always recommended). Also check that
-<code>bitcoind</code> was build with all required patches applied (see
+<code>force_send_and_ping</code> and <code>reduced_pow</code> (these should all be enabled if
+compiling with the <code>reproduce</code> feature). Also check that <code>bitcoind</code> was build
+with all required patches applied (see
 <a href="https://github.com/dergoegge/fuzzamoto/tree/master/target-patches">target-patches/</a>
 and <a href="usage/./target-patches.html">Patches</a>).</p>
 </li>
@@ -677,6 +703,20 @@ solution is to make the harness/test produce valid inputs (if possible).</p>
 more aggressive</li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="coverage-reports"><a class="header" href="#coverage-reports">Coverage Reports</a></h1>
+<p>It is possible to generate coverage reports for fuzzamoto scenarios by using the
+<code>fuzzamoto-cli coverage</code> command. The build steps for doing this are slightly
+different than if you were to run <code>fuzzamoto-cli init</code>:</p>
+<ul>
+<li>the bitcoind node must be compiled with llvm's <a href="https://clang.llvm.org/docs/SourceBasedCodeCoverage.html">source-based code coverage</a>.</li>
+<li>fuzzamoto's nyx feature should be disabled as coverage tooling does not use snapshots.</li>
+<li>a corpus for the specific scenario is required</li>
+</ul>
+<p>The <code>Dockerfile.coverage</code> file can be used to run a corpus against a specific scenario.
+Both a host directory and a corpus directory must be mounted.</p>
+<p>Example:</p>
+<pre><code>docker build -t fuzzamoto-coverage -f Dockerfile.coverage .
+docker run --privileged -it -v HOST_OUTPUT_DIR:/mnt/output -v HOST_CORPUS_DIR:/mnt/corpus fuzzamoto-coverage /fuzzamoto/target/release/scenario-compact-blocks
+</code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="system-requirements"><a class="header" href="#system-requirements">System Requirements</a></h1>
 <p>For testcase reproduction (see <a href="usage/./reproducing.html">Reproducing Testcases</a>), no
 hardware restrictions with regard to architecture should exist. A linux operating
