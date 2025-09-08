@@ -92,7 +92,7 @@ RUN cd bitcoin/ && cmake -B build_fuzz \
       -DAPPEND_CPPFLAGS="-DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION" \
       -DAPPEND_LDFLAGS="-fuse-ld=lld-${LLVM_V}"
 
-RUN cmake --build bitcoin/build_fuzz -j$(nproc) --target bitcoind
+RUN cmake --build bitcoin/build_fuzz -j$(nproc) --target bitcoin-node
 
 ENV CC=clang-${LLVM_V}
 ENV CXX=clang++-${LLVM_V}
@@ -121,12 +121,16 @@ COPY ./fuzzamoto-libafl/src/ src/
 WORKDIR /fuzzamoto/fuzzamoto-scenarios
 COPY ./fuzzamoto-scenarios/Cargo.toml .
 COPY ./fuzzamoto-scenarios/bin/ bin/
+COPY ./fuzzamoto-scenarios/build.rs .
+COPY ./fuzzamoto-scenarios/schema/ schema/
 
 WORKDIR /fuzzamoto
 COPY ./Cargo.toml .
 RUN mkdir .cargo && cargo vendor > .cargo/config
 
-ENV BITCOIND_PATH=/bitcoin/build_fuzz/bin/bitcoind
+RUN apt-get install -y capnproto libcapnp-dev
+
+ENV BITCOIND_PATH=/bitcoin/build_fuzz/bin/bitcoin-node
 RUN cargo build --package fuzzamoto-scenarios --package fuzzamoto-cli \
   --verbose --features "fuzzamoto/fuzz,fuzzamoto-scenarios/fuzz" --release
 
@@ -148,7 +152,7 @@ RUN for scenario in /fuzzamoto/target/release/scenario-*; do \
       /fuzzamoto/target/release/fuzzamoto-cli init \
         --sharedir $SCENARIO_NYX_DIR \
         --crash-handler ./fuzzamoto/libnyx_crash_handler.so \
-        --bitcoind bitcoin/build_fuzz/bin/bitcoind \
+        --bitcoind bitcoin/build_fuzz/bin/bitcoin-node \
         --scenario $scenario \
         --nyx-dir /AFLplusplus/nyx_mode; \
       fi \

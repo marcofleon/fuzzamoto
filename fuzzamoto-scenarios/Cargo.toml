@@ -35,6 +35,15 @@ postcard = { version = "1.1.1", features = [
   "alloc",
 ], default-features = false }
 
+capnp = "0.21"
+capnp-rpc = "0.21"
+tokio = { version = "1.0", features = ["full"] }
+futures = "0.3"
+tokio-util = { version = "0.7", features = ["compat"] }
+
+[build-dependencies]
+capnpc = "0.21"
+
 [[bin]]
 name = "scenario-generic"
 path = "bin/generic.rs"
@@ -58,3 +67,7 @@ path = "bin/rpc_generic.rs"
 [[bin]]
 name = "scenario-ir"
 path = "bin/ir.rs"
+
+[[bin]]
+name = "scenario-ipc-mining"
+path = "bin/ipc_mining.rs"

@@ -62,7 +62,7 @@ RUN cd bitcoin/ && cmake -B build_fuzz_cov \
       -DAPPEND_LDFLAGS="-fprofile-instr-generate -fcoverage-mapping -fuse-ld=lld-${LLVM_V}" \
       -DAPPEND_CPPFLAGS="-DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION"
 
-RUN cmake --build bitcoin/build_fuzz_cov -j$(nproc) --target bitcoind
+RUN cmake --build bitcoin/build_fuzz_cov -j$(nproc) --target bitcoin-node
 
 WORKDIR /fuzzamoto/fuzzamoto-nyx-sys
 COPY ./fuzzamoto-nyx-sys/Cargo.toml .
@@ -88,15 +88,19 @@ COPY ./fuzzamoto-libafl/src/ src/
 WORKDIR /fuzzamoto/fuzzamoto-scenarios
 COPY ./fuzzamoto-scenarios/Cargo.toml .
 COPY ./fuzzamoto-scenarios/bin/ bin/
+COPY ./fuzzamoto-scenarios/build.rs .
+COPY ./fuzzamoto-scenarios/schema/ schema/
 
 WORKDIR /fuzzamoto
 COPY ./Cargo.toml .
 RUN mkdir .cargo && cargo vendor > .cargo/config
 
-ENV BITCOIND_PATH=/bitcoin/build_fuzz_cov/bin/bitcoind
+RUN apt-get install -y capnproto libcapnp-dev
+
+ENV BITCOIND_PATH=/bitcoin/build_fuzz_cov/bin/bitcoin-node
 RUN cargo build -p fuzzamoto-scenarios --bins -p fuzzamoto-cli --verbose --features "reproduce" --release
 
 ENV LLVM_V=${LLVM_V}
 
 ENTRYPOINT ["/fuzzamoto/target/release/fuzzamoto-cli", "coverage", "--output", "/mnt/output", \
-            "--corpus", "/mnt/corpus", "--bitcoind", "/bitcoin/build_fuzz_cov/bin/bitcoind", "--scenario"]
+            "--corpus", "/mnt/corpus", "--bitcoind", "/bitcoin/build_fuzz_cov/bin/bitcoin-node", "--scenario"]
