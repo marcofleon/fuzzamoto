@@ -1,6 +1,7 @@
 pub mod advance_time;
 pub mod block;
 pub mod compact_filters;
+pub mod create_connection;
 pub mod getdata;
 pub mod send_raw_message;
 pub mod tx;
@@ -10,6 +11,7 @@ pub mod witness;
 pub use advance_time::*;
 pub use block::*;
 pub use compact_filters::*;
+pub use create_connection::*;
 pub use getdata::*;
 pub use send_raw_message::*;
 pub use tx::*;
