@@ -258,6 +258,17 @@ where
         let mut non_probe_action_count = 0;
         for action in program.actions.drain(..) {
             match action {
+                CompiledAction::Connect(_node, connection_type) => {
+                    let conn_type = match connection_type.as_str() {
+                        "inbound" => fuzzamoto::connections::ConnectionType::Inbound,
+                        "outbound" => fuzzamoto::connections::ConnectionType::Outbound,
+                        _ => continue,
+                    };
+
+                    if let Ok(connection) = self.inner.target.connect(conn_type) {
+                        self.inner.connections.push(connection);
+                    }
+                }
                 CompiledAction::SendRawMessage(from, command, message) => {
                     if self.inner.connections.is_empty() {
                         return;
@@ -298,7 +309,6 @@ where
                     let _ = self.second.set_mocktime(time);
                     non_probe_action_count += 1;
                 }
-                _ => {}
             }
         }
     }
