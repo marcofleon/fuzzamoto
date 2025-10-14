@@ -38,6 +38,7 @@ pub struct Compiler {
 
     variables: Vec<Box<dyn Any>>,
     output: CompiledProgram,
+    connection_counter: usize,
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
@@ -232,6 +233,8 @@ impl Compiler {
             ));
         }
 
+        self.connection_counter = ir.context.num_connections;
+
         for (_, instruction) in ir.instructions.iter().enumerate() {
             let actions_before = self
                 .output
@@ -357,6 +360,10 @@ impl Compiler {
                     self.handle_bip152_blocktxn_operations(&instruction)?;
                 }
 
+                Operation::AddConnection => {
+                    self.handle_new_connection_operations(&instruction)?;
+                }
+
                 Operation::SendRawMessage
                 | Operation::SendTxNoWit
                 | Operation::SendTx
@@ -415,6 +422,7 @@ impl Compiler {
                 actions: Vec::with_capacity(4096),
                 metadata: CompiledMetadata::new(),
             },
+            connection_counter: 0,
         }
     }
 
@@ -1471,6 +1479,31 @@ impl Compiler {
             _ => unreachable!("Non probing operation passed to handle_probe_operations"),
         }
 
+        Ok(())
+    }
+
+    fn handle_new_connection_operations(
+        &mut self,
+        instruction: &Instruction,
+    ) -> Result<(), CompilerError> {
+        match &instruction.operation {
+            Operation::AddConnection => {
+                let node_var = self.get_input::<usize>(&instruction.inputs, 0)?;
+                let connection_type_var = self.get_input::<String>(&instruction.inputs, 1)?;
+
+                self.output.actions.push(CompiledAction::Connect(
+                    *node_var,
+                    connection_type_var.clone(),
+                ));
+
+                let connection_id = self.connection_counter;
+                self.connection_counter += 1;
+                self.append_variable(connection_id);
+            }
+            _ => {
+                unreachable!("Non-connection operation passed to handle_new_connection_operations")
+            }
+        }
         Ok(())
     }
 
