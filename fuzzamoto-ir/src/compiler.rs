@@ -147,7 +147,7 @@ struct Nop;
 impl Compiler {
     pub fn compile(mut self, ir: &Program) -> CompilerResult {
         for instruction in &ir.instructions {
-            match instruction.operation.clone() {
+            match &instruction.operation {
                 Operation::Nop { .. }
                 | Operation::LoadNode(..)
                 | Operation::LoadConnection(..)
@@ -292,7 +292,7 @@ impl Compiler {
                 let bytes_var = self
                     .get_input::<Vec<Inventory>>(&instruction.inputs, 0)?
                     .clone();
-                self.append_variable(bytes_var.clone());
+                self.append_variable(bytes_var);
             }
             Operation::AddTxidWithWitnessInv => {
                 let tx_var = self.get_input::<Tx>(&instruction.inputs, 1)?;
@@ -766,7 +766,7 @@ impl Compiler {
                 let tx_var = self.get_input::<Tx>(&instruction.inputs, 1)?;
 
                 let mut tx_var = tx_var.clone();
-                if matches!(instruction.operation, Operation::SendTxNoWit) {
+                if matches!(&instruction.operation, Operation::SendTxNoWit) {
                     for input in tx_var.tx.input.iter_mut() {
                         input.witness.clear();
                     }
@@ -778,7 +778,7 @@ impl Compiler {
                 let connection_var = self.get_input::<usize>(&instruction.inputs, 0)?;
                 let inv_var = self.get_input::<Vec<Inventory>>(&instruction.inputs, 1)?;
 
-                let msg_type = if matches!(instruction.operation, Operation::SendInv) {
+                let msg_type = if matches!(&instruction.operation, Operation::SendInv) {
                     "inv"
                 } else {
                     "getdata"
@@ -807,7 +807,7 @@ impl Compiler {
                 let block_var = self.get_input::<bitcoin::Block>(&instruction.inputs, 1)?;
 
                 let mut block_var = block_var.clone();
-                if matches!(instruction.operation, Operation::SendBlockNoWit) {
+                if matches!(&instruction.operation, Operation::SendBlockNoWit) {
                     for tx in block_var.txdata.iter_mut() {
                         for input in tx.input.iter_mut() {
                             input.witness.clear();
@@ -822,7 +822,7 @@ impl Compiler {
                 let block_height_var = self.get_input::<u32>(&instruction.inputs, 2)?;
                 let header_var = self.get_input::<Header>(&instruction.inputs, 3)?;
 
-                if matches!(instruction.operation, Operation::SendGetCFilters) {
+                if matches!(&instruction.operation, Operation::SendGetCFilters) {
                     self.emit_send_message(
                         *connection_var,
                         "getcfilters",
