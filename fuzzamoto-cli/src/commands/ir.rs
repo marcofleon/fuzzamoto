@@ -221,7 +221,7 @@ fn compile_ir_file(input: &PathBuf, output: &PathBuf) -> Result<()> {
     let bytes = std::fs::read(input)?;
     let program: Program = postcard::from_bytes(&bytes)?;
 
-    let mut compiler = Compiler::new();
+    let compiler = Compiler::new();
     let compiled = compiler.compile(&program).unwrap();
 
     let bytes = postcard::to_allocvec(&compiled)?;
@@ -443,7 +443,7 @@ pub fn analyze_ir(input: &PathBuf) -> Result<()> {
                 instructions_hist[bucket] += 1;
 
                 // Compile the program
-                let mut compiler = fuzzamoto_ir::compiler::Compiler::new();
+                let compiler = fuzzamoto_ir::compiler::Compiler::new();
                 if let Ok(compiled) = compiler.compile(&program) {
                     // Count total sends in this program
                     let sends = compiled

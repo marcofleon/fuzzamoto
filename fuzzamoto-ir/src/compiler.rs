@@ -145,7 +145,7 @@ struct CoinbaseTx {
 struct Nop;
 
 impl Compiler {
-    pub fn compile(&mut self, ir: &Program) -> CompilerResult {
+    pub fn compile(mut self, ir: &Program) -> CompilerResult {
         for instruction in &ir.instructions {
             match instruction.operation.clone() {
                 Operation::Nop { .. }
@@ -262,7 +262,7 @@ impl Compiler {
             }
         }
 
-        Ok(self.output.clone()) // TODO: do not clone
+        Ok(self.output)
     }
 
     pub fn new() -> Self {

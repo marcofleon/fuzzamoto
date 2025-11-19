@@ -49,7 +49,7 @@ impl<'a> ScenarioInput<'a> for TestCase {
     fn decode(bytes: &'a [u8]) -> Result<Self, String> {
         let program = if cfg!(feature = "compile_in_vm") {
             let program: Program = postcard::from_bytes(bytes).map_err(|e| e.to_string())?;
-            let mut compiler = Compiler::new();
+            let compiler = Compiler::new();
             compiler.compile(&program).map_err(|e| e.to_string())?
         } else {
             postcard::from_bytes(bytes).map_err(|e| e.to_string())?

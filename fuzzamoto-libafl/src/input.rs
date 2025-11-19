@@ -45,7 +45,7 @@ impl HasTargetBytes for IrInput {
     fn target_bytes(&self) -> OwnedSlice<'_, u8> {
         #[cfg(not(feature = "compile_in_vm"))]
         {
-            let mut compiler = fuzzamoto_ir::compiler::Compiler::new();
+            let compiler = fuzzamoto_ir::compiler::Compiler::new();
 
             let compiled_input = compiler
                 .compile(self.ir())
