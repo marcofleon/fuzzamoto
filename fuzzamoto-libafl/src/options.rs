@@ -6,8 +6,13 @@ use libafl_bolts::core_affinity::{CoreId, Cores};
 /// Profiles that define which mutators/generators are enabled
 #[derive(Debug, Clone, Default, ValueEnum)]
 pub enum Profile {
+    /// All generators except slow/specialized ones
     #[default]
     Default,
+    /// All generators enabled
+    All,
+    /// Generators focused on connection and handshake testing
+    Connections,
 }
 
 #[readonly::make]
@@ -185,12 +190,27 @@ impl FuzzerOptions {
         match self.profile {
             Profile::Default => {
                 // Generators disabled in the default profile
-                const DISABLED: &[&str] = &[];
+                const DISABLED: &[&str] = &["AddConnectionWithHandshakeGenerator"];
                 if DISABLED.contains(&name) {
                     0.0
                 } else {
                     weight
                 }
+            }
+            Profile::All => weight,
+            Profile::Connections => {
+                const ENABLED: &[&str] = &[
+                    "InputMutator",
+                    "OperationMutator",
+                    "AddConnectionWithHandshakeGenerator",
+                    "AdvanceTimeGenerator",
+                    "HeaderGenerator",
+                    "BlockGenerator",
+                    "TxoGenerator",
+                    "SingleTxGenerator",
+                    "SendBlockGenerator",
+                ];
+                if ENABLED.contains(&name) { weight } else { 0.0 }
             }
         }
     }
