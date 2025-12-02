@@ -7,8 +7,13 @@ use libafl_bolts::core_affinity::{CoreId, Cores};
 /// Profiles that define which mutators/generators are enabled
 #[derive(Debug, Clone, Default, ValueEnum)]
 pub enum Profile {
+    /// All generators except slow/specialized ones
     #[default]
     Default,
+    /// All generators enabled
+    All,
+    /// Generators focused on connection and handshake testing
+    Connections,
 }
 
 #[readonly::make]
@@ -214,16 +219,40 @@ impl FuzzerOptions {
                     0.0
                 }
             }
-            None => match self.profile {
-                Profile::Default => {
-                    const DISABLED: &[&str] = &[];
-                    if DISABLED.contains(&name) {
-                        0.0
-                    } else {
-                        weight
+            None => {
+                match self.profile {
+                    Profile::Default => {
+                        // Generators disabled in the default profile
+                        const DISABLED: &[&str] = &[
+                            "AddConnection:handshake:outbound",
+                            "AddConnection:handshake:inbound",
+                        ];
+                        if DISABLED.contains(&name) {
+                            0.0
+                        } else {
+                            weight
+                        }
+                    }
+                    Profile::All => weight,
+                    Profile::Connections => {
+                        const ENABLED: &[&str] = &[
+                            "InputMutator",
+                            "OperationMutator",
+                            "AddConnection:handshake:outbound",
+                            "AddConnection:handshake:inbound",
+                            "AddConnection:outbound",
+                            "AddConnection:inbound",
+                            "AdvanceTimeGenerator",
+                            "HeaderGenerator",
+                            "BlockGenerator",
+                            "TxoGenerator",
+                            "SingleTxGenerator",
+                            "SendBlockGenerator",
+                        ];
+                        if ENABLED.contains(&name) { weight } else { 0.0 }
                     }
                 }
-            },
+            }
         };
 
         if self.swarm < 1.0 && base_weight > 0.0 {
