@@ -1,8 +1,15 @@
 use rand::{Rng, RngCore};
 use std::path::PathBuf;
 
-use clap::Parser;
+use clap::{Parser, ValueEnum};
 use libafl_bolts::core_affinity::{CoreId, Cores};
+
+/// Profiles that define which mutators/generators are enabled
+#[derive(Debug, Clone, Default, ValueEnum)]
+pub enum Profile {
+    #[default]
+    Default,
+}
 
 #[readonly::make]
 #[derive(Parser, Debug)]
@@ -114,7 +121,7 @@ pub struct FuzzerOptions {
     #[arg(
         long,
         value_delimiter = ',',
-        help = "Comma-separated list of mutators/generators to enable (if not specified, all are enabled)"
+        help = "Comma-separated list of mutators/generators to enable (overrides profile)"
     )]
     pub mutators: Option<Vec<String>>,
 
@@ -147,6 +154,13 @@ pub struct FuzzerOptions {
         default_value_t = unix_time()
     )]
     pub swarm_seed: u64,
+
+    #[arg(
+        long,
+        default_value = "default",
+        help = "Profile that defines which generators are enabled"
+    )]
+    pub profile: Profile,
 }
 
 fn unix_time() -> u64 {
@@ -205,24 +219,34 @@ impl FuzzerOptions {
 
     /// Returns the weight for a mutator/generator, or 0.0 if it's disabled
     pub fn mutator_weight<R: RngCore>(&self, name: &str, weight: f32, rng: &mut R) -> f32 {
-        let weight = if self.swarm < 1.0 {
+        let base_weight = match &self.mutators {
+            Some(list) => {
+                if list.iter().any(|m| m == name) {
+                    weight
+                } else {
+                    0.0
+                }
+            }
+            None => match self.profile {
+                Profile::Default => {
+                    const DISABLED: &[&str] = &[];
+                    if DISABLED.contains(&name) {
+                        0.0
+                    } else {
+                        weight
+                    }
+                }
+            },
+        };
+
+        if self.swarm < 1.0 && base_weight > 0.0 {
             if rng.gen_bool(self.swarm) {
-                weight
+                base_weight
             } else {
                 0.0
             }
         } else {
-            match &self.mutators {
-                None => weight, // Default: all enabled with original weight
-                Some(list) => {
-                    if list.iter().any(|m| m == name) {
-                        weight
-                    } else {
-                        0.0
-                    }
-                }
-            }
-        };
-        weight
+            base_weight
+        }
     }
 }
