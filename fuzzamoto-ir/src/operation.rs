@@ -61,6 +61,15 @@ pub enum Operation {
         data: Vec<u8>,
     },
 
+    /// Load handshake options for a p2p connection
+    LoadHandshakeOpts {
+        relay: bool,
+        starting_height: i32,
+        wtxidrelay: bool,
+        addrv2: bool,
+        erlay: bool,
+    },
+
     BeginBuildBlockTxn,
     AddTxToBlockTxn,
     EndBuildBlockTxn,
@@ -71,8 +80,10 @@ pub enum Operation {
     AdvanceTime,
     /// Set mock time
     SetTime,
-    /// Create a new connection to a node
+    /// Create a new connection without performing a handshake
     AddConnection,
+    /// Create a new connection and perform a handshake
+    AddConnectionWithHandshake,
 
     /// Script building operations
     BuildRawScripts,
@@ -224,6 +235,8 @@ impl fmt::Display for Operation {
             Operation::LoadTime(time) => write!(f, "LoadTime({})", time),
             Operation::SetTime => write!(f, "SetTime"),
             Operation::AddConnection => write!(f, "AddConnection"),
+            Operation::AddConnectionWithHandshake => write!(f, "AddConnectionWithHandshake"),
+            Operation::LoadHandshakeOpts { .. } => write!(f, "LoadHandshakeOpts"),
             Operation::BuildRawScripts => write!(f, "BuildRawScripts"),
             Operation::BuildPayToWitnessScriptHash => write!(f, "BuildPayToWitnessScriptHash"),
             Operation::BuildPayToScriptHash => write!(f, "BuildPayToScriptHash"),
@@ -439,6 +452,8 @@ impl Operation {
             | Operation::LoadSize(_)
             | Operation::SetTime
             | Operation::AddConnection
+            | Operation::AddConnectionWithHandshake
+            | Operation::LoadHandshakeOpts { .. }
             | Operation::BuildPayToWitnessScriptHash
             | Operation::BuildRawScripts
             | Operation::BuildPayToScriptHash
@@ -573,6 +588,8 @@ impl Operation {
             | Operation::LoadSize(_)
             | Operation::SetTime
             | Operation::AddConnection
+            | Operation::AddConnectionWithHandshake
+            | Operation::LoadHandshakeOpts { .. }
             | Operation::BuildPayToWitnessScriptHash
             | Operation::BuildRawScripts
             | Operation::BuildPayToScriptHash
@@ -705,6 +722,8 @@ impl Operation {
             Operation::LoadTime(_) => vec![Variable::Time],
             Operation::SetTime => vec![],
             Operation::AddConnection => vec![Variable::Connection],
+            Operation::AddConnectionWithHandshake => vec![Variable::Connection],
+            Operation::LoadHandshakeOpts { .. } => vec![Variable::HandshakeParams],
             Operation::Nop { outputs, .. } => vec![Variable::Nop; *outputs],
             Operation::BuildPayToWitnessScriptHash => vec![Variable::Scripts],
             Operation::BuildPayToScriptHash => vec![Variable::Scripts],
@@ -818,6 +837,12 @@ impl Operation {
             Operation::AdvanceTime => vec![Variable::Time, Variable::Duration],
             Operation::SetTime => vec![Variable::Time],
             Operation::AddConnection => vec![Variable::Node, Variable::ConnectionType],
+            Operation::AddConnectionWithHandshake => vec![
+                Variable::Node,
+                Variable::ConnectionType,
+                Variable::HandshakeParams,
+                Variable::Time,
+            ],
             Operation::BuildPayToWitnessScriptHash => {
                 vec![Variable::Bytes, Variable::ConstWitnessStack]
             }
@@ -963,6 +988,7 @@ impl Operation {
             | Operation::LoadFilterLoad { .. }
             | Operation::LoadFilterAdd { .. }
             | Operation::LoadNonce(..)
+            | Operation::LoadHandshakeOpts { .. }
             | Operation::BeginBuildTxInputs
             | Operation::BeginBuildInventory
             | Operation::BeginBuildAddrList
@@ -1007,6 +1033,8 @@ impl Operation {
             | Operation::LoadTime(_)
             | Operation::SetTime
             | Operation::AddConnection
+            | Operation::AddConnectionWithHandshake
+            | Operation::LoadHandshakeOpts { .. }
             | Operation::BuildPayToWitnessScriptHash
             | Operation::BuildRawScripts
             | Operation::BuildPayToScriptHash
