@@ -84,6 +84,8 @@ impl Instruction {
             | Operation::LoadTime(_)
             | Operation::SetTime
             | Operation::AddConnection
+            | Operation::AddConnectionWithHandshake
+            | Operation::LoadHandshakeOpts { .. }
             | Operation::BuildPayToWitnessScriptHash
             | Operation::BuildPayToScriptHash
             | Operation::BuildRawScripts

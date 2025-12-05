@@ -269,6 +269,37 @@ where
                         self.inner.connections.push(connection);
                     }
                 }
+                CompiledAction::ConnectAndHandshake {
+                    node: _,
+                    connection_type,
+                    relay,
+                    starting_height,
+                    wtxidrelay,
+                    addrv2,
+                    erlay,
+                    time,
+                } => {
+                    let conn_type = match connection_type.as_str() {
+                        "inbound" => fuzzamoto::connections::ConnectionType::Inbound,
+                        "outbound" => fuzzamoto::connections::ConnectionType::Outbound,
+                        _ => continue,
+                    };
+
+                    let handshake_opts = fuzzamoto::connections::HandshakeOpts {
+                        time: time as i64,
+                        relay,
+                        starting_height,
+                        wtxidrelay,
+                        addrv2,
+                        erlay,
+                    };
+
+                    if let Ok(mut connection) = self.inner.target.connect(conn_type) {
+                        if connection.version_handshake(handshake_opts).is_ok() {
+                            self.inner.connections.push(connection);
+                        }
+                    }
+                }
                 CompiledAction::SendRawMessage(from, command, message) => {
                     if self.inner.connections.is_empty() {
                         return;
