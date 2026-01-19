@@ -5,5 +5,10 @@ implementations.
 
 | Patch File                                                                     | Implementation | Bug Type         |
 |:-------------------------------------------------------------------------------|:---------------|:-----------------|
-| `bitcoin-core/0001-Revert-p2p-don-t-find-1p1cs-for-reconsiderable-txns-.patch` | Bitcoin Core   | Assume crash     |
-| `bitcoin-core/0002-p2p-Reintroduce-blocktxn-assertion-crash-bug.patch`         | Bitcoin Core   | Assert crash     |
+| `bitcoin-core/boolean-conversion/`                                             | Bitcoin Core   | Consensus        |
+| `bitcoin-core/cve-2013-5700/`                                                  | Bitcoin Core   | Division by zero |
+| `bitcoin-core/cve-2018-17144/`                                                 | Bitcoin Core   | Consensus        |
+| `bitcoin-core/cve-2024-35202/`                                                 | Bitcoin Core   | Assert crash     |
+| `bitcoin-core/findanddelete/`                                                  | Bitcoin Core   | Consensus        |
+| `bitcoin-core/minimal-witness/`                                                | Bitcoin Core   | Consensus        |
+| `bitcoin-core/unsigned-txver/`                                                 | Bitcoin Core   | Consensus        |
