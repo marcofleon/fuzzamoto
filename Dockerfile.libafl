@@ -45,7 +45,6 @@ RUN apt-get update && apt install -y --no-install-recommends \
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 ENV PATH="/root/.cargo/bin:${PATH}"
 RUN rustup install nightly-2026-02-15 && rustup default nightly-2026-02-15
-RUN cargo install cargo-afl
 RUN cargo install just
 
 WORKDIR /
