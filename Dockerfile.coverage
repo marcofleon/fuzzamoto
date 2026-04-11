@@ -57,6 +57,11 @@ COPY ./target-patches/bitcoin-core-aggressive-rng.patch bitcoin/
 RUN cd bitcoin/ && \
       git apply bitcoin-core-aggressive-rng.patch
 
+COPY ./target-patches/bitcoin-core-reset-coverage-counters.patch bitcoin/
+
+RUN cd bitcoin/ && \
+      git apply bitcoin-core-reset-coverage-counters.patch
+
 RUN cd bitcoin/ && cmake -B build_fuzz_cov \
       --toolchain ./depends/$(./depends/config.guess)/toolchain.cmake \
       -DAPPEND_CFLAGS="-fprofile-instr-generate -fcoverage-mapping" \
@@ -97,7 +102,7 @@ COPY ./Cargo.toml .
 RUN mkdir .cargo && cargo vendor > .cargo/config
 
 ENV BITCOIND_PATH=/bitcoin/build_fuzz_cov/bin/bitcoind
-RUN cargo build -p fuzzamoto-scenarios --bins -p fuzzamoto-cli --verbose --features "reproduce" --release
+RUN cargo build -p fuzzamoto-scenarios --bins -p fuzzamoto-cli --verbose --features "reproduce,coverage" --release
 
 ENV LLVM_V=${LLVM_V}
 
