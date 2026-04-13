@@ -1,0 +1,34 @@
+diff --git a/src/init.cpp b/src/init.cpp
+index 49cfc39423..6050a29175 100644
+--- a/src/init.cpp
++++ b/src/init.cpp
+@@ -433,6 +433,17 @@ static void HandleSIGHUP(int)
+ {
+     LogInstance().m_reopen_file = true;
+ }
++
++#if defined(__clang__)
++extern "C" __attribute__((weak)) void __llvm_profile_reset_counters(void);
++extern "C" __attribute__((weak)) void __llvm_profile_reset_counters(void) {}
++
++static void HandleSIGUSR1(int)
++{
++    __llvm_profile_reset_counters();
++}
++#endif
++
+ #else
+ static BOOL WINAPI consoleCtrlHandler(DWORD dwCtrlType)
+ {
+@@ -902,6 +913,11 @@ bool AppInitBasicSetup(const ArgsManager& args, std::atomic<int>& exit_status)
+     registerSignalHandler(SIGTERM, HandleSIGTERM);
+     registerSignalHandler(SIGINT, HandleSIGTERM);
+
++#if defined(__clang__)
++    // Wipe coverage counters on SIGUSR1
++    registerSignalHandler(SIGUSR1, HandleSIGUSR1);
++#endif
++
+     // Reopen debug.log on SIGHUP
+     registerSignalHandler(SIGHUP, HandleSIGHUP);
+

@@ -33,7 +33,7 @@ macro_rules! fuzzamoto_main {
         fn main() -> std::process::ExitCode {
             use env_logger;
             use fuzzamoto::runners::{Runner, StdRunner};
-            use std::process::ExitCode;
+            use std::process::{Command, ExitCode};
 
             env_logger::init();
 
@@ -52,6 +52,23 @@ macro_rules! fuzzamoto_main {
                     return ExitCode::from(exit_code);
                 }
             };
+
+            // Invoke the patched signal handler to reset coverage counters.
+            if cfg!(feature = "coverage") {
+                if let Ok(output) = Command::new("pgrep").arg("bitcoind").output() {
+                    let stdout = String::from_utf8_lossy(&output.stdout);
+                    let mut lines = stdout.lines();
+                    assert_eq!(lines.clone().count(), 1);
+                    let pid = lines.next().unwrap().trim();
+
+                    // Send SIGUSR1 to bitcoind which will invoke the patched signal handler.
+                    if let Ok(signal_output) = Command::new("kill").args(["-10", pid]).output() {
+                        assert!(signal_output.status.success());
+                    }
+                } else {
+                    return ExitCode::FAILURE;
+                }
+            }
 
             // Ensure the runner dropped prior to the scenario when returning from main.
             let runner = runner;
