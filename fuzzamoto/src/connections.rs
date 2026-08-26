@@ -8,6 +8,9 @@ use std::net;
 pub enum ConnectionType {
     Inbound,
     Outbound,
+    /// Outbound connection of type `outbound-full-recon` (Erlay): the target
+    /// offers transaction reconciliation on it and initiates reconciliation rounds.
+    OutboundReconciliation,
 }
 
 pub trait Transport {
@@ -302,6 +305,10 @@ impl<T: Transport> Connection<T> {
     pub fn is_handshake_complete(&self) -> bool {
         self.handshake_complete
     }
+
+    pub fn connection_type(&self) -> &ConnectionType {
+        &self.connection_type
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -396,7 +403,10 @@ impl<T: Transport> Connection<T> {
         version_message.version = 70016; // wtxidrelay version
         version_message.relay = opts.relay;
 
-        if self.connection_type == ConnectionType::Outbound {
+        if matches!(
+            self.connection_type,
+            ConnectionType::Outbound | ConnectionType::OutboundReconciliation
+        ) {
             loop {
                 let received = self.transport.receive()?;
                 if received.0 == "version" {

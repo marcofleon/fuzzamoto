@@ -52,6 +52,9 @@ impl<R: RngCore, M: OperationByteMutator> Mutator<R> for OperationMutator<M> {
         candidate_instruction.1.operation = match &mut candidate_instruction.1.operation {
             Operation::SendTxNoWit => Operation::SendTx,
             Operation::SendTx => Operation::SendTxNoWit,
+            Operation::SendReconDiff { success } => Operation::SendReconDiff {
+                success: !*success,
+            },
             Operation::BuildPayToScriptHash => Operation::BuildPayToWitnessScriptHash,
             Operation::BuildPayToWitnessScriptHash => Operation::BuildPayToScriptHash,
 
@@ -152,10 +155,14 @@ impl<R: RngCore, M: OperationByteMutator> Mutator<R> for OperationMutator<M> {
             Operation::LoadConnection(_) => {
                 Operation::LoadConnection(rng.gen_range(0..program.context.num_connections))
             }
-            Operation::LoadConnectionType(conn_type) => match conn_type.as_str() {
-                "outbound" => Operation::LoadConnectionType("inbound".to_string()),
-                _ => Operation::LoadConnectionType("outbound".to_string()),
-            },
+            Operation::LoadConnectionType(conn_type) => {
+                let next = match conn_type.as_str() {
+                    "outbound" => ["inbound", "outbound-recon"].choose(rng).unwrap(),
+                    "inbound" => ["outbound", "outbound-recon"].choose(rng).unwrap(),
+                    _ => ["outbound", "inbound"].choose(rng).unwrap(),
+                };
+                Operation::LoadConnectionType(next.to_string())
+            }
             Operation::LoadDuration(_) => Operation::LoadDuration(Duration::from_secs(
                 *[
                     1,

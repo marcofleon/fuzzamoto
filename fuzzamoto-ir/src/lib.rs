@@ -8,6 +8,7 @@ pub mod metadata;
 pub mod minimizers;
 pub mod mutators;
 pub mod operation;
+pub mod recon;
 pub mod variable;
 
 use crate::errors::ProgramValidationError;
@@ -19,6 +20,7 @@ pub use metadata::*;
 pub use minimizers::*;
 pub use mutators::*;
 pub use operation::*;
+pub use recon::*;
 
 pub use fuzzamoto::taproot::*;
 use rand::{RngCore, seq::IteratorRandom};
@@ -35,7 +37,7 @@ pub struct Program {
 
 /// `ProgramContext` provides a summary of the context in which a program is executed, describing
 /// the snapshot state of the VM.
-#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Hash)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Hash, Default)]
 pub struct ProgramContext {
     /// Number of nodes under test
     pub num_nodes: usize,
@@ -43,6 +45,12 @@ pub struct ProgramContext {
     pub num_connections: usize,
     /// Timestamp (inside the VM) at which the program is executed
     pub timestamp: u64,
+    /// Pre-existing connections on which the target is the Erlay reconciliation
+    /// *responder*, i.e. it answers `reqtxrcncl` from the harness with a sketch.
+    pub recon_responder_connections: Vec<usize>,
+    /// Pre-existing connections on which the target is the Erlay reconciliation
+    /// *initiator*, i.e. it periodically sends `reqtxrcncl` and expects a sketch back.
+    pub recon_initiator_connections: Vec<usize>,
 }
 
 /// `FullProgramContext` holds the full context in which a program is executed, i.e. information

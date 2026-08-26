@@ -157,10 +157,15 @@ impl Target<V1Transport> for BitcoinCoreTarget {
 
                 Ok(Connection::new(connection_type, V1Transport { socket }))
             }
-            ConnectionType::Outbound => {
+            ConnectionType::Outbound | ConnectionType::OutboundReconciliation => {
                 let (listener, port) = Self::create_listener()?;
                 self.listeners.push(listener);
                 let listener = self.listeners.last().unwrap();
+
+                let rpc_conn_type = match connection_type {
+                    ConnectionType::OutboundReconciliation => "outbound-full-recon",
+                    _ => "outbound-full-relay",
+                };
 
                 // Tell Bitcoin Core to connect to our listener
                 let client = &self.node.client;
@@ -169,7 +174,7 @@ impl Target<V1Transport> for BitcoinCoreTarget {
                         "addconnection",
                         &[
                             format!("127.0.0.1:{port}").into(),
-                            "outbound-full-relay".into(),
+                            rpc_conn_type.into(),
                             false.into(), // no v2
                         ],
                     )
@@ -235,10 +240,15 @@ impl Target<V2Transport> for BitcoinCoreTarget {
                     V2Transport::new(socket, bip324::Role::Initiator)?,
                 ))
             }
-            ConnectionType::Outbound => {
+            ConnectionType::Outbound | ConnectionType::OutboundReconciliation => {
                 let (listener, port) = Self::create_listener()?;
                 self.listeners.push(listener);
                 let listener = self.listeners.last().unwrap();
+
+                let rpc_conn_type = match connection_type {
+                    ConnectionType::OutboundReconciliation => "outbound-full-recon",
+                    _ => "outbound-full-relay",
+                };
 
                 // Tell Bitcoin Core to connect to our listener
                 let client = &self.node.client;
@@ -247,7 +257,7 @@ impl Target<V2Transport> for BitcoinCoreTarget {
                         "addconnection",
                         &[
                             format!("127.0.0.1:{port}").into(),
-                            "outbound-full-relay".into(),
+                            rpc_conn_type.into(),
                             true.into(), // v2
                         ],
                     )

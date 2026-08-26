@@ -240,6 +240,7 @@ impl FuzzerOptions {
                             "AddConnectionGenerator:in:handshake",
                             "AddConnectionGenerator:out",
                             "AddConnectionGenerator:in",
+                            "AddConnectionGenerator:out-recon:handshake",
                         ];
                         if DISABLED.contains(&name) {
                             0.0
@@ -256,6 +257,7 @@ impl FuzzerOptions {
                             "AddConnectionGenerator:in:handshake",
                             "AddConnectionGenerator:out",
                             "AddConnectionGenerator:in",
+                            "AddConnectionGenerator:out-recon:handshake",
                             "AdvanceTimeGenerator",
                             "HeaderGenerator",
                             "BlockGenerator",

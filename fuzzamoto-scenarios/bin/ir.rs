@@ -152,6 +152,8 @@ where
             num_nodes: 1,
             num_connections: inner.connections.len(),
             timestamp: inner.time,
+            recon_responder_connections: inner.recon_responder_connections.clone(),
+            recon_initiator_connections: inner.recon_initiator_connections.clone(),
         }
     }
 
@@ -285,6 +287,9 @@ where
                     let conn_type = match connection_type.as_str() {
                         "inbound" => fuzzamoto::connections::ConnectionType::Inbound,
                         "outbound" => fuzzamoto::connections::ConnectionType::Outbound,
+                        "outbound-recon" => {
+                            fuzzamoto::connections::ConnectionType::OutboundReconciliation
+                        }
                         _ => continue,
                     };
 
@@ -307,6 +312,9 @@ where
                     let conn_type = match connection_type.as_str() {
                         "inbound" => fuzzamoto::connections::ConnectionType::Inbound,
                         "outbound" => fuzzamoto::connections::ConnectionType::Outbound,
+                        "outbound-recon" => {
+                            fuzzamoto::connections::ConnectionType::OutboundReconciliation
+                        }
                         _ => continue,
                     };
 

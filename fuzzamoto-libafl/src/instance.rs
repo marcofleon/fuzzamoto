@@ -6,8 +6,8 @@ use fuzzamoto_ir::{
     BloomFilterClearGenerator, BloomFilterLoadGenerator, CombineMutator, CompactBlockGenerator,
     CompactFilterQueryGenerator, GetAddrGenerator, GetDataGenerator, HeaderGenerator, InputMutator,
     InventoryGenerator, LargeTxGenerator, LongChainGenerator, OneParentOneChildGenerator,
-    OperationMutator, Program, ReorgBlockGenerator, SendBlockGenerator, SendMessageGenerator,
-    SingleTxGenerator, TipBlockGenerator, TxoGenerator, WitnessGenerator,
+    OperationMutator, Program, ReconMessageGenerator, ReorgBlockGenerator, SendBlockGenerator,
+    SendMessageGenerator, SingleTxGenerator, TipBlockGenerator, TxoGenerator, WitnessGenerator,
     cutting::CuttingMinimizer, instr_block::InstrBlockMinimizer, nopping::NoppingMinimizer,
 };
 
@@ -338,7 +338,11 @@ where
             ),
             (
                 40.0,
-                IrGenerator::new(SendMessageGenerator::default(), rng.clone())
+                IrGenerator::new(SendMessageGenerator::default_with_erlay(), rng.clone())
+            ),
+            (
+                40.0,
+                IrGenerator::new(ReconMessageGenerator, rng.clone())
             ),
             (50.0, IrGenerator::new(SingleTxGenerator, rng.clone())),
             (50.0, IrGenerator::new(LongChainGenerator, rng.clone())),
@@ -409,6 +413,13 @@ where
             (
                 50.0,
                 IrGenerator::new(AddConnectionGenerator::inbound(), rng.clone())
+            ),
+            (
+                20.0,
+                IrGenerator::new(
+                    AddConnectionGenerator::handshake_outbound_recon(),
+                    rng.clone()
+                )
             ),
         ];
         log_weights(

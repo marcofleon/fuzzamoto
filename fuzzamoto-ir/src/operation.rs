@@ -188,6 +188,10 @@ pub enum Operation {
     SendAddrV2,
     SendTx,
     SendTxNoWit,
+    /// Send a `reconcildiff` message finalizing a reconciliation round the
+    /// fuzzer initiated, requesting the input transaction by its BIP-330 short
+    /// id (computed at compile time from the tx's wtxid).
+    SendReconDiff { success: bool },
     SendHeader,
     SendBlock,
     SendBlockNoWit,
@@ -411,6 +415,7 @@ impl fmt::Display for Operation {
             Operation::SendAddrV2 => write!(f, "SendAddrV2"),
             Operation::SendTx => write!(f, "SendTx"),
             Operation::SendTxNoWit => write!(f, "SendTxNoWit"),
+            Operation::SendReconDiff { success } => write!(f, "SendReconDiff({success})"),
             Operation::SendHeader => write!(f, "SendHeader"),
             Operation::SendBlock => write!(f, "SendBlock"),
             Operation::SendBlockNoWit => write!(f, "SendBlockNoWit"),
@@ -557,6 +562,7 @@ impl Operation {
             | Operation::EndBlockTransactions
             | Operation::SendTx
             | Operation::SendTxNoWit
+            | Operation::SendReconDiff { .. }
             | Operation::SendHeader
             | Operation::SendBlock
             | Operation::SendGetCFilters
@@ -718,6 +724,7 @@ impl Operation {
             | Operation::SendAddrV2
             | Operation::SendTx
             | Operation::SendTxNoWit
+            | Operation::SendReconDiff { .. }
             | Operation::SendHeader
             | Operation::SendBlock
             | Operation::SendBlockNoWit
@@ -900,6 +907,7 @@ impl Operation {
 
             Operation::SendTx => vec![],
             Operation::SendTxNoWit => vec![],
+            Operation::SendReconDiff { .. } => vec![],
             Operation::SendGetData => vec![],
             Operation::SendInv => vec![],
             Operation::SendGetAddr => vec![],
@@ -986,6 +994,9 @@ impl Operation {
             Operation::AddWitness => vec![Variable::MutWitnessStack, Variable::Bytes],
             Operation::EndWitnessStack => vec![Variable::MutWitnessStack],
             Operation::SendTx | Operation::SendTxNoWit => {
+                vec![Variable::Connection, Variable::ConstTx]
+            }
+            Operation::SendReconDiff { .. } => {
                 vec![Variable::Connection, Variable::ConstTx]
             }
             Operation::EndBuildInventory => vec![Variable::MutInventory],
@@ -1214,6 +1225,7 @@ impl Operation {
             | Operation::SendAddrV2
             | Operation::SendTx
             | Operation::SendTxNoWit
+            | Operation::SendReconDiff { .. }
             | Operation::SendHeader
             | Operation::SendBlock
             | Operation::SendBlockNoWit

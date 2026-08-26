@@ -58,6 +58,7 @@ mod tests {
             num_nodes: 1,
             num_connections: 1,
             timestamp: 0,
+            ..crate::ProgramContext::default()
         };
         let instructions = vec![
             Instruction {

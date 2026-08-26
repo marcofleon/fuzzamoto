@@ -65,6 +65,12 @@ pub struct GenericScenario<TX: Transport, T: Target<TX>> {
     pub connections: Vec<Connection<TX>>,
     pub time: u64,
     pub block_tree: BTreeMap<BlockHash, (Block, u32)>,
+    /// Indices into `connections` on which the target acts as Erlay reconciliation
+    /// *responder* (inbound peers that negotiated reconciliation).
+    pub recon_responder_connections: Vec<usize>,
+    /// Indices into `connections` on which the target acts as Erlay reconciliation
+    /// *initiator* (`outbound-full-recon` peers).
+    pub recon_initiator_connections: Vec<usize>,
 
     _phantom: std::marker::PhantomData<(TX, T)>,
 }
@@ -136,6 +142,28 @@ impl<TX: Transport, T: Target<TX>> GenericScenario<TX, T> {
                 false,
             ),
         ];
+
+        // `outbound-full-recon` connections only exist on Erlay-enabled targets;
+        // skip gracefully where the RPC doesn't know the connection type.
+        if let Ok(connection) = target.connect(ConnectionType::OutboundReconciliation) {
+            connections.push((connection, true, true, true, true));
+        }
+
+        // Bitcoin Core offers reconciliation to peers that relay transactions and are
+        // either inbound (Core responds to reconciliation requests) or
+        // `outbound-full-recon` (Core initiates reconciliation rounds).
+        let mut recon_responder_connections = Vec::new();
+        let mut recon_initiator_connections = Vec::new();
+        for (index, (connection, relay, _, _, erlay)) in connections.iter().enumerate() {
+            if !(*relay && *erlay) {
+                continue;
+            }
+            match connection.connection_type() {
+                ConnectionType::Inbound => recon_responder_connections.push(index),
+                ConnectionType::OutboundReconciliation => recon_initiator_connections.push(index),
+                ConnectionType::Outbound => {}
+            }
+        }
 
         let mut send_compact = false;
         #[expect(clippy::cast_possible_wrap)]
@@ -214,6 +242,8 @@ impl<TX: Transport, T: Target<TX>> GenericScenario<TX, T> {
             time,
             connections: connections.drain(..).map(|(c, _, _, _, _)| c).collect(),
             block_tree,
+            recon_responder_connections,
+            recon_initiator_connections,
             _phantom: std::marker::PhantomData,
         })
     }
@@ -281,7 +311,7 @@ impl Encodable for Action {
                     ConnectionType::Inbound => {
                         false.consensus_encode(s)?;
                     }
-                    ConnectionType::Outbound => {
+                    ConnectionType::Outbound | ConnectionType::OutboundReconciliation => {
                         true.consensus_encode(s)?;
                     }
                 }

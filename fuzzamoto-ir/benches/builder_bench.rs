@@ -10,6 +10,7 @@ fn test_context() -> ProgramContext {
         num_nodes: 2,
         num_connections: 4,
         timestamp: 1_700_000_000,
+        ..ProgramContext::default()
     }
 }
 

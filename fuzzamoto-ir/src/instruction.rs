@@ -64,6 +64,7 @@ impl Instruction {
             | Operation::AddFilteredBlockInv
             | Operation::SendTxNoWit
             | Operation::SendTx
+            | Operation::SendReconDiff { .. }
             | Operation::AddAddrV2
             | Operation::LoadBytes(_)
             | Operation::LoadTaprootAnnex { .. }
@@ -128,6 +129,7 @@ impl Instruction {
             | Operation::AddWitness
             | Operation::SendTx
             | Operation::SendTxNoWit
+            | Operation::SendReconDiff { .. }
             | Operation::AddTxInput
             | Operation::AddTxOutput
             | Operation::AddTxidInv

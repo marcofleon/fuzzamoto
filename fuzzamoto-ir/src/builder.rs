@@ -268,7 +268,7 @@ impl ProgramBuilder {
             }
 
             Operation::LoadConnectionType(connection_type) => match connection_type.as_str() {
-                "outbound" | "inbound" => {}
+                "outbound" | "inbound" | "outbound-recon" => {}
                 _ => {
                     return Err(ProgramValidationError::InvalidConnectionType(
                         connection_type.clone(),
@@ -684,6 +684,7 @@ mod tests {
             num_nodes: 2,
             num_connections: 4,
             timestamp: 0,
+            ..ProgramContext::default()
         }
     }
 

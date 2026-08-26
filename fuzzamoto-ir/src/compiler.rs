@@ -483,6 +483,7 @@ impl Compiler {
                 Operation::SendRawMessage
                 | Operation::SendTxNoWit
                 | Operation::SendTx
+                | Operation::SendReconDiff { .. }
                 | Operation::SendGetData
                 | Operation::SendInv
                 | Operation::SendGetAddr
@@ -1408,6 +1409,19 @@ impl Compiler {
                 }
 
                 self.emit_send_message(*connection_var, "tx", &tx_var.tx);
+            }
+            Operation::SendReconDiff { success } => {
+                let connection_var = self.get_input::<usize>(&instruction.inputs, 0)?;
+                let tx_var = self.get_input::<Tx>(&instruction.inputs, 1)?;
+
+                let wtxid = tx_var.tx.compute_wtxid();
+                let short_id = crate::recon::short_txid(&wtxid);
+
+                // bool + compactsize-encoded vec of one short id
+                let mut payload = vec![u8::from(*success), 1u8];
+                payload.extend_from_slice(&short_id.to_le_bytes());
+
+                self.emit_send_raw_message(*connection_var, "reconcildiff", payload);
             }
             Operation::SendGetData | Operation::SendInv => {
                 let connection_var = self.get_input::<usize>(&instruction.inputs, 0)?;
@@ -2343,6 +2357,7 @@ mod tests {
             num_nodes: 1,
             num_connections: 1,
             timestamp: 0,
+            ..ProgramContext::default()
         };
 
         let mut builder = ProgramBuilder::new(context.clone());
@@ -2373,6 +2388,7 @@ mod tests {
             num_nodes: 1,
             num_connections: 1,
             timestamp: 0,
+            ..ProgramContext::default()
         };
 
         let mut builder = ProgramBuilder::new(context.clone());
@@ -2441,6 +2457,7 @@ mod tests {
             num_nodes: 1,
             num_connections: 1,
             timestamp: 0,
+            ..ProgramContext::default()
         };
 
         let mut builder = ProgramBuilder::new(context.clone());
@@ -2636,11 +2653,53 @@ mod tests {
         assert_eq!(&control_block[33..], &HIDDEN_HASH);
     }
 
+    #[test]
+    fn compile_send_recon_diff_emits_short_id_request() {
+        let mut builder = ProgramBuilder::new(test_context());
+        let connection = builder.force_append_expect_output(vec![], &Operation::LoadConnection(0));
+        let funding_txo = append_op_true_txo(&mut builder, [0x77; 32], 50_000);
+        let scripts = builder.force_append_expect_output(vec![], &Operation::BuildPayToAnchor);
+        let tx = build_single_output_tx_for_tests(&mut builder, funding_txo.index, scripts.index, 49_000);
+
+        builder.force_append(vec![connection.index, tx.index], &Operation::SendTx);
+        builder.force_append(
+            vec![connection.index, tx.index],
+            &Operation::SendReconDiff { success: true },
+        );
+
+        let program = builder.finalize().expect("valid program");
+        let mut compiler = Compiler::new();
+        let compiled = compiler.compile(&program).expect("compile");
+
+        assert_eq!(compiled.actions.len(), 2);
+
+        // The tx action lets us independently derive the expected short id
+        let tx_payload = match &compiled.actions[0] {
+            CompiledAction::SendRawMessage(_, cmd, payload) if cmd == "tx" => payload.clone(),
+            other => panic!("unexpected action {other:?}"),
+        };
+        let tx = Transaction::consensus_decode(&mut tx_payload.as_slice()).unwrap();
+        let expected_short_id = crate::recon::short_txid(&tx.compute_wtxid());
+
+        match &compiled.actions[1] {
+            CompiledAction::SendRawMessage(conn, cmd, payload) => {
+                assert_eq!(*conn, 0);
+                assert_eq!(cmd, "reconcildiff");
+                // success=true, compactsize(1), then the short id in LE
+                let mut expected = vec![1u8, 1u8];
+                expected.extend_from_slice(&expected_short_id.to_le_bytes());
+                assert_eq!(*payload, expected);
+            }
+            other => panic!("unexpected action {other:?}"),
+        }
+    }
+
     fn build_annex_program(annex: Vec<u8>) -> Program {
         let mut builder = ProgramBuilder::new(ProgramContext {
             num_nodes: 1,
             num_connections: 1,
             timestamp: 0,
+            ..ProgramContext::default()
         });
 
         let connection = builder.force_append_expect_output(vec![], &Operation::LoadConnection(0));
@@ -2799,6 +2858,7 @@ mod tests {
             num_nodes: 1,
             num_connections: 1,
             timestamp: 0,
+            ..ProgramContext::default()
         }
     }
 }
